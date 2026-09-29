@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shwe Phase 4 · Well Operations</title>
+  <meta name="description" content="SHD-Q, MSD-A, MHD-A, MHD-B 시추 캠페인의 DDR, trajectory, time-depth, BHA, drilling parameter 통합 모니터링">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071422'/%3E%3Cpath d='M18 13v16c0 13 7 20 14 26 7-6 14-13 14-26V13' fill='none' stroke='%232bd9c5' stroke-width='5'/%3E%3Cpath d='M16 24h32' stroke='%23ffb95a' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="brand" type="button" data-action="overview" aria-label="캠페인 개요로 이동">
+        <span class="brand-mark">S4</span>
+        <span><small>Offshore drilling control</small><b>Shwe Project · Phase 4</b></span>
+      </button>
+      <nav class="topnav" aria-label="Well 바로가기">
+        <button class="nav-chip is-active" type="button" data-action="overview">Overview</button>
+        <button class="nav-chip" type="button" data-well="SHD-Q">SHD-Q</button>
+        <button class="nav-chip" type="button" data-well="MSD-A">MSD-A</button>
+        <button class="nav-chip" type="button" data-well="MHD-A">MHD-A</button>
+        <button class="nav-chip" type="button" data-well="MHD-B">MHD-B</button>
+      </nav>
+      <div class="data-cut"><span></span>Latest DDR · 28 Sep 2026</div>
+    </header>
+
+    <main id="overviewView" class="view"></main>
+    <main id="detailView" class="view" hidden></main>
+  </div>
+
+  <template id="overviewTemplate">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">4 wells · 1 rig · Myanmar offshore</p>
+        <h1>Well Operations<br><span>Monitor</span></h1>
+        <p class="hero-lede">DDR를 기준으로 현재 작업, NPT 원인, trajectory, time–depth, BHA와 drilling parameter를 교차 확인합니다.</p>
+        <div class="hero-meta"><span>Bluewhale-1</span><span>SHWE · MYA · MAHAR</span><span>metric depth</span></div>
+      </div>
+      <div class="now-card">
+        <div class="now-top"><span class="pulse"></span><b>NOW · SHD-Q ST2</b><time>28 SEP · 06:00</time></div>
+        <h2>BOP annular change-out 준비</h2>
+        <p>Upper / lower annular fault finding 후 LMRP를 분리했습니다. Annular element와 cap seal 교체, 양측 TDX load-path inspection이 다음 작업입니다.</p>
+        <dl><div><dt>Current MD</dt><dd>3,556.0 m</dd></div><div><dt>Current TVD</dt><dd>2,967.6 m</dd></div><div><dt>Latest T-time</dt><dd>16.0 h</dd></div></dl>
+      </div>
+    </section>
+
+    <section class="overview-kpis" aria-label="캠페인 핵심 지표">
+      <article><small>Wells in scope</small><strong>4</strong><span>1 active · 3 suspended</span></article>
+      <article><small>Deepest MD</small><strong>3,556 <i>m</i></strong><span>SHD-Q ST2</span></article>
+      <article><small>Booked NPT</small><strong>1,725 <i>h</i></strong><span>TP only · through 02 Sep</span></article>
+      <article><small>Bluewhale share</small><strong>1,069 <i>h</i></strong><span>TP + TU · 55% of total NPT</span></article>
+    </section>
+
+    <section class="section-block">
+      <header class="section-head"><div><p class="eyebrow">Campaign overview</p><h2>Well status</h2></div><p>Well 카드를 선택하면 상세 모니터로 이동합니다.</p></header>
+      <div id="wellGrid" class="well-grid"></div>
+    </section>
+
+    <section class="ops-grid section-block">
+      <article class="panel campaign-panel">
+        <header class="panel-head"><div><p class="eyebrow">NPT exposure</p><h2>Booked + unplanned time</h2></div><span class="source-badge">DDR summary · 02 Sep</span></header>
+        <div id="nptBars" class="npt-bars"></div>
+        <p class="panel-note">Booked NPT(TP)는 party attribution이 있는 productive time loss입니다. U는 programme 밖 unplanned time이므로 별도 표시합니다.</p>
+      </article>
+
+      <article class="panel watch-panel">
+        <header class="panel-head"><div><p class="eyebrow">Decision watch</p><h2>운영 집중 항목</h2></div><span class="risk-count">3 open</span></header>
+        <ol class="watch-list">
+          <li><span class="severity critical">A</span><div><b>SHD-Q · BOP readiness</b><p>두 annular element 교체 후 pressure/function test를 완료해야 splash 일정(04 Oct)이 유지됩니다.</p></div></li>
+          <li><span class="severity warn">B</span><div><b>Critical spares</b><p>Annular, TDX alignment, Hydra-Tong 계열 repeat failure를 반영해 campaign-critical spares를 재점검합니다.</p></div></li>
+          <li><span class="severity watch">C</span><div><b>NPT classification</b><p>Unassigned TP 126.5 h와 U 220 h의 party / root cause를 close-out 전에 정합화합니다.</p></div></li>
+        </ol>
+      </article>
+    </section>
+
+    <section class="section-block context-grid">
+      <article class="panel source-panel">
+        <header class="panel-head"><div><p class="eyebrow">Data lineage</p><h2>이번 화면의 근거</h2></div></header>
+        <div class="source-list">
+          <div><span>DDR</span><p>각 Well 최신 Daily Drilling Report에서 현재 작업, MD/TVD, casing, mud weight, T-time을 확인했습니다.</p></div>
+          <div><span>Survey</span><p>MWD survey CSV의 MD, TVD, vertical section, inclination, azimuth를 trajectory에 사용했습니다.</p></div>
+          <div><span>DML</span><p>Hole parameter workbook의 실제 구간별 ROP, RPM, WOB, flow, SPP, ECD 범위를 사용했습니다.</p></div>
+          <div><span>NPT</span><p>02 Sep DDR Summary의 TP/U/TU와 party attribution을 campaign 비교에 사용했습니다.</p></div>
+        </div>
+      </article>
+      <figure class="reference-photo">
+        <img src="https://www.boem.gov/sites/default/files/styles/max_2600x2600/public/images/oil_gas_slider.jpg?itok=ACQQfAVa" alt="해상 플랫폼과 지원선의 실제 운영 참고 사진">
+        <figcaption><span>OFFSHORE OPERATIONS · REFERENCE</span><a href="https://www.boem.gov/" target="_blank" rel="noreferrer">Photo: Lee Tilton / BOEM · Public domain</a></figcaption>
+      </figure>
+    </section>
+  </template>
+
+  <template id="detailTemplate">
+    <section class="detail-hero">
+      <button class="back-link" type="button" data-action="overview"><span>‹</span> Campaign overview</button>
+      <div class="detail-title"><div><p class="eyebrow" id="detailField"></p><h1 id="detailName"></h1><p id="detailSubtitle"></p></div><span id="detailStatus" class="status-pill"></span></div>
+      <div id="detailStats" class="detail-stats"></div>
+    </section>
+    <nav id="detailTabs" class="detail-tabs" aria-label="Well 상세 메뉴"></nav>
+    <section id="detailContent" class="detail-content"></section>
+  </template>
+
+  <div id="chartTooltip" class="chart-tooltip" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
