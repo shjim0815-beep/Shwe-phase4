@@ -76,7 +76,7 @@ function setupTimeChart(scope){
 function renderTrajectory(w){
  if(!w.surveys.length){$('#content').innerHTML='<p class="empty">Survey 자료를 확인할 수 없습니다.</p>';return}
  $('#content').innerHTML=`<article class="panel"><p class="eyebrow">Survey-derived spatial view</p><h2>3D trajectory · ${w.name}</h2><div class="controls"><label>Wellbore <select id="surveySelect">${w.surveys.map((s,i)=>`<option value="${i}">${esc(s.name)}</option>`).join('')}</select></label><button class="btn active" data-view="3d">3D</button><button class="btn" data-view="section">Vertical section</button><button class="btn" data-view="plan">Plan · E/N</button><label>수평 확대 <select id="exaggeration"><option value="1">1× · 실제 축척</option><option value="10">10×</option><option value="50">50×</option><option value="100">100×</option></select></label><button class="btn" id="resetView">Reset</button></div><canvas class="trajectory-canvas" id="trajectory" aria-label="Survey-based 3D well trajectory. Drag to rotate; use controls and station table for data." role="img"></canvas><div class="controls"><label>회전 <input type="range" id="yaw" min="-180" max="180" value="-25"></label><label>기울기 <input type="range" id="tilt" min="-70" max="70" value="20"></label><label>Survey station <input type="range" id="station" min="0" value="0"></label></div><div class="trajectory-stats" id="stationInfo"></div><div id="surveyNote"></div><details><summary>전체 survey station 확인</summary><div id="surveyTable"></div></details></article>`;
- let idx=0,mode='3d',yaw=45,tilt=20,ex=1,selected=0,pointer=null;
+ let idx=0,mode='3d',yaw=45,tilt=20,ex=1,selected=0,pointer=null,zoom=1,panX=0,panY=0;
  const homeYaw=()=>{const p=w.surveys[idx].stations.at(-1);return Math.atan2(-p[4],p[5])*180/Math.PI};
  const canvas=$('#trajectory'),ctx=canvas.getContext('2d');
  function setup(){const s=w.surveys[idx];selected=s.stations.length-1;$('#station').max=selected;$('#station').value=selected;$('#surveyNote').innerHTML=`<p class="note">실제 좌표: E/W, N/S, TVD(m). 기본 축척 1:1. 드래그로 회전하며, 0m는 survey datum 기준입니다. ${s.referenceExtension?'원점~첫 tie-on 구간은 측정값이 아닌 점선 참조선입니다.':'원본에 포함된 0m/tie-on 좌표를 그대로 표시합니다.'} 마지막 survey 이후의 TD 구간은 추정하지 않습니다.</p><p class="source-path">${esc(s.source)}</p>`;$('#surveyTable').innerHTML=table(['MD (m)','Inc (°)','Azi (°)','TVD (m)','North (m)','East (m)'],s.stations.map(p=>`<tr>${p.map(v=>`<td class="num">${fmt(v,2)}</td>`).join('')}</tr>`));draw()}
@@ -87,8 +87,8 @@ function renderTrajectory(w){
   function proj(E,N,Z){E*=ex;N*=ex;if(mode==='plan')return [E,-N];if(mode==='section')return [E*Math.sin(az)+N*Math.cos(az),Z];const u=E*Math.cos(ang)-N*Math.sin(ang),v=E*Math.sin(ang)+N*Math.cos(ang);return [u,Z*Math.cos(t)-v*Math.sin(t)]}
   const coords=stations.map(p=>proj(p[5],p[4],p[3]));const bounds=[...coords,proj(0,0,0),proj(0,0,depth)];if(mode==='3d')bounds.push(proj(radius,0,0),proj(0,radius,0));
   let minX=Math.min(...bounds.map(p=>p[0])),maxX=Math.max(...bounds.map(p=>p[0])),minY=Math.min(...bounds.map(p=>p[1])),maxY=Math.max(...bounds.map(p=>p[1]));
-  const scale=Math.min((width-140)/Math.max(100,maxX-minX),(height-100)/Math.max(100,maxY-minY));
-  const xy=p=>[(width-(maxX-minX)*scale)/2+(p[0]-minX)*scale,50+(p[1]-minY)*scale];
+  const scale=zoom*Math.min((width-140)/Math.max(100,maxX-minX),(height-100)/Math.max(100,maxY-minY));
+  const xy=p=>[(width-(maxX-minX)*scale)/2+(p[0]-minX)*scale+panX,height/2+(p[1]-(minY+maxY)/2)*scale+panY];
   function line(a,b,color,dash=[],lw=1){ctx.beginPath();ctx.setLineDash(dash);ctx.lineWidth=lw;ctx.strokeStyle=color;ctx.moveTo(...xy(a));ctx.lineTo(...xy(b));ctx.stroke();ctx.setLineDash([])}
   function label(p,text,color='#8eabbe',dx=8,dy=0){const q=xy(p);ctx.fillStyle=color;ctx.font='11px Consolas, monospace';ctx.fillText(text,q[0]+dx,q[1]+dy)}
   if(mode!=='plan'){line(proj(0,0,0),proj(0,0,depth),'#4d6c80',[4,5]);for(let z=0;z<=depth;z+=500)label(proj(0,0,z),`${z}m TVD`,'#7793a6',-85,4)}
@@ -96,6 +96,13 @@ function renderTrajectory(w){
   if(s.referenceExtension)line(proj(0,0,0),coords[0],'#7b98ab',[5,5],2);
   for(let i=1;i<coords.length;i++)line(coords[i-1],coords[i],w.color,[],3);
   coords.forEach((p,i)=>{if(i%3===0||i===selected){ctx.beginPath();ctx.arc(...xy(p),i===selected?5:2.1,0,Math.PI*2);ctx.fillStyle=i===selected?'#fff':w.color;ctx.fill()}});
+  for(const shoe of (w.casingShoes||[])){
+   const hi=stations.findIndex(p=>p[0]>=shoe.md);if(hi<0)continue;
+   const a=stations[Math.max(0,hi-1)],b=stations[hi],t=b[0]===a[0]?0:(shoe.md-a[0])/(b[0]-a[0]);
+   const point=proj(a[5]+t*(b[5]-a[5]),a[4]+t*(b[4]-a[4]),shoe.tvd);
+   ctx.fillStyle='#ffb95a';const q=xy(point);ctx.fillRect(q[0]-4,q[1]-4,8,8);
+   label(point,shoe.n+' '+fmt(shoe.md,1)+'mMD / '+fmt(shoe.tvd,1)+'mTVD','#ffb95a',10,-8);
+  }
   const p=stations[selected];label(coords[selected],`MD ${fmt(p[0],1)}m`,w.color,10,0);
   ctx.fillStyle=ex===1?'#91b3c9':'#ffb95a';ctx.font='12px Consolas, monospace';ctx.fillText(`${mode.toUpperCase()} · horizontal ${ex}× · ${stations.length} stations`,18,24);
   const scaleUnit=mode==='plan'?ex:1;const unit=100/scale/scaleUnit;ctx.strokeStyle='#708fa3';ctx.beginPath();ctx.moveTo(18,height-22);ctx.lineTo(118,height-22);ctx.stroke();ctx.fillText(`${fmt(unit,unit<10?1:0)}m projected scale${ex>1&&mode!=='plan'?' · before H exaggeration':''}`,18,height-32);
@@ -105,8 +112,10 @@ function renderTrajectory(w){
  document.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{mode=e.dataset.view;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b===e));draw()});$('#resetView').onclick=()=>{yaw=-25;tilt=20;ex=1;$('#yaw').value=yaw;$('#tilt').value=tilt;$('#exaggeration').value=1;draw()};
  canvas.onpointerdown=e=>{pointer=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)};canvas.onpointermove=e=>{if(!pointer||mode!=='3d')return;yaw=Math.max(-180,Math.min(180,yaw+(e.clientX-pointer[0])*.5));tilt=Math.max(-70,Math.min(70,tilt+(e.clientY-pointer[1])*.4));pointer=[e.clientX,e.clientY];$('#yaw').value=yaw;$('#tilt').value=tilt;draw()};canvas.onpointerup=()=>pointer=null;canvas.onpointercancel=()=>pointer=null;
  yaw=homeYaw();$('#yaw').value=yaw;
- $('#resetView').onclick=()=>{yaw=homeYaw();tilt=20;ex=1;$('#yaw').value=yaw;$('#tilt').value=tilt;$('#exaggeration').value=1;draw()};
+ $('#resetView').onclick=()=>{yaw=homeYaw();tilt=20;ex=1;zoom=1;panX=0;panY=0;$('#yaw').value=yaw;$('#tilt').value=tilt;$('#exaggeration').value=1;draw()};
+ canvas.addEventListener('wheel',e=>{e.preventDefault();const old=zoom;zoom=Math.max(.5,Math.min(20,zoom*Math.exp(-e.deltaY*(e.deltaMode===1?16:1)*.0015)));const b=canvas.getBoundingClientRect(),ratio=zoom/old;panX=(e.clientX-b.left-b.width/2)*(1-ratio)+panX*ratio;panY=(e.clientY-b.top-b.height/2)*(1-ratio)+panY*ratio;draw()},{passive:false});
  const ro=new ResizeObserver(()=>draw());ro.observe(canvas);cleanup=()=>ro.disconnect();setup();
+ $('#surveyNote').insertAdjacentHTML('afterend', '<p class="note">마우스휠 확대/축소 · Reset 초기화. 케이싱 마커의 수평 위치는 survey 사이를 보간하며 깊이는 casing 기록값입니다.</p>'+table(['Casing','Depth (mMD)','Depth (mTVD)'],(w.casingShoes||[]).map(c=>'<tr><td>'+esc(c.n)+'</td><td>'+fmt(c.md,1)+'</td><td>'+fmt(c.tvd,1)+'</td></tr>')));
 }
 function renderRuns(w,paramsOnly){
  const sections=[...new Set(w.runs.map(r=>r.sectionGroup))];let section=sectionState[w.name]||'all';let run=runState[w.name]||w.runs.at(-1).number;
